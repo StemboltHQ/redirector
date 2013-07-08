@@ -22,9 +22,12 @@ class RedirectRule < ActiveRecord::Base
     if connection_mysql?
       '(redirect_rules.source_is_case_sensitive = :true AND :source REGEXP BINARY redirect_rules.source) OR '+
       '(redirect_rules.source_is_case_sensitive = :false AND :source REGEXP redirect_rules.source)'
-    else
+    elsif connection_postgres?
       '(redirect_rules.source_is_case_sensitive = :true AND :source ~ redirect_rules.source) OR '+
       '(redirect_rules.source_is_case_sensitive = :false AND :source ~* redirect_rules.source)'
+    else
+      logger.warn "WARNING: Database unsupported by redirector. Skipping regex redirect rules"
+      ':false'
     end
   end
 
@@ -72,6 +75,10 @@ class RedirectRule < ActiveRecord::Base
 
   def self.connection_mysql?
     connection.adapter_name.downcase.include?('mysql')
+  end
+
+  def self.connection_postgres?
+    connection.adapter_name.downcase.include?('postgresql')
   end
 
   def strip_source_whitespace
